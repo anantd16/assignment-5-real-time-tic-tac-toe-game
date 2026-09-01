@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Real-Time Tic Tac Toe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%23%EF%B8%8F%E2%83%A3</text></svg>" />
+</head>
+
+<body>
+  <!-- Animated background blobs -->
+  <div class="bg-blobs" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+  </div>
+
+  <!-- Connection status pill -->
+  <div id="connectionStatus" class="conn-pill offline">
+    <span class="dot"></span><span id="connectionText">Connecting…</span>
+  </div>
+
+  <!-- Toast notifications -->
+  <div id="toastArea" class="toast-area" aria-live="polite"></div>
+
+  <main class="app">
+
+    <!-- ================= LOGIN SCREEN ================= -->
+    <section id="loginScreen" class="screen login-screen">
+      <div class="card login-card">
+        <div class="logo">🎮</div>
+        <h1 class="title">Real-Time <span class="grad">Tic Tac Toe</span></h1>
+        <p class="subtitle">Two players. One board. Live over WebSockets.</p>
+
+        <form id="loginForm" class="login-form" autocomplete="off">
+          <label for="usernameInput" class="label">Choose your username</label>
+          <div class="input-wrap">
+            <span class="input-icon">👤</span>
+            <input
+              id="usernameInput"
+              type="text"
+              class="input"
+              placeholder="e.g. Aditya"
+              maxlength="15"
+              required
+              autocomplete="off" />
+          </div>
+          <p id="loginError" class="error-msg" role="alert"></p>
+          <button id="joinBtn" type="submit" class="btn btn-primary">
+            <span class="btn-label">Join Game</span>
+          </button>
+        </form>
+
+        <div class="lobby">
+          <div class="lobby-head">
+            <span>Players in lobby</span>
+            <span id="lobbyCount" class="chip">0 / 2</span>
+          </div>
+          <ul id="lobbyList" class="lobby-list">
+            <li class="lobby-empty">Nobody here yet — be the first!</li>
+          </ul>
+        </div>
+
+        <p class="hint">First player plays <b class="x">X</b>, second plays <b class="o">O</b>. Max 2 players.</p>
+      </div>
+    </section>
+
+    <!-- ================= GAME SCREEN ================= -->
+    <section id="gameScreen" class="screen game-screen hidden">
+
+      <header class="topbar">
+        <div class="brand">🎮 <span>Tic Tac Toe</span></div>
+        <div class="topbar-right">
+          <span id="dbBadge" class="badge db-badge" title="Database used for game history">
+            🔥 Firestore
+          </span>
+          <button id="leaveBtn" class="btn btn-ghost btn-sm">Leave</button>
+        </div>
+      </header>
+
+      <div class="game-layout">
+
+        <!-- ---------- LEFT: players + status ---------- -->
+        <aside class="panel players-panel">
+          <h2 class="panel-title">Players</h2>
+
+          <div id="playerCardX" class="player-card x-card empty">
+            <div class="avatar x">X</div>
+            <div class="player-meta">
+              <span class="player-name" id="nameX">Waiting…</span>
+              <span class="player-role">Player 1</span>
+            </div>
+            <span class="turn-flag" id="turnFlagX">TURN</span>
+          </div>
+
+          <div id="playerCardO" class="player-card o-card empty">
+            <div class="avatar o">O</div>
+            <div class="player-meta">
+              <span class="player-name" id="nameO">Waiting…</span>
+              <span class="player-role">Player 2</span>
+            </div>
+            <span class="turn-flag" id="turnFlagO">TURN</span>
+          </div>
+
+          <div class="stat-row">
+            <div class="stat">
+              <span class="stat-value" id="statMoves">0</span>
+              <span class="stat-label">Moves</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value" id="statPlayers">0/2</span>
+              <span class="stat-label">Online</span>
+            </div>
+          </div>
+        </aside>
+
+        <!-- ---------- CENTER: the board ---------- -->
+        <div class="panel board-panel">
+          <div id="statusBar" class="status-bar">Waiting for a second player…</div>
+
+          <div id="board" class="board" role="grid" aria-label="Tic tac toe board">
+            <button class="cell" data-index="0" aria-label="cell 1"></button>
+            <button class="cell" data-index="1" aria-label="cell 2"></button>
+            <button class="cell" data-index="2" aria-label="cell 3"></button>
+            <button class="cell" data-index="3" aria-label="cell 4"></button>
+            <button class="cell" data-index="4" aria-label="cell 5"></button>
+            <button class="cell" data-index="5" aria-label="cell 6"></button>
+            <button class="cell" data-index="6" aria-label="cell 7"></button>
+            <button class="cell" data-index="7" aria-label="cell 8"></button>
+            <button class="cell" data-index="8" aria-label="cell 9"></button>
+          </div>
+
+          <div class="board-actions">
+            <div class="you-are">
+              You are <span id="youSymbol" class="you-symbol">-</span>
+              <span id="youName" class="you-name"></span>
+            </div>
+            <button id="resetBtn" class="btn btn-secondary btn-sm">↺ Reset Game</button>
+          </div>
+        </div>
+
+        <!-- ---------- RIGHT: history ---------- -->
+        <aside class="panel history-panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Game History</h2>
+            <button id="refreshHistoryBtn" class="icon-btn" title="Refresh history">⟳</button>
+          </div>
+          <p class="panel-sub">Saved in Firebase Firestore</p>
+          <ul id="historyList" class="history-list">
+            <li class="history-empty">No games played yet.</li>
+          </ul>
+        </aside>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= WINNER MODAL ================= -->
+  <div id="modalOverlay" class="modal-overlay hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div id="modalIcon" class="modal-icon">🏆</div>
+      <h2 id="modalTitle" class="modal-title">Winner!</h2>
+      <p id="modalText" class="modal-text"></p>
+      <div id="modalCountdown" class="modal-countdown"></div>
+      <div class="modal-actions">
+        <button id="modalPlayAgain" class="btn btn-primary btn-sm">Play Again</button>
+        <button id="modalClose" class="btn btn-ghost btn-sm">Close</button>
+      </div>
+    </div>
+    <div id="confetti" class="confetti" aria-hidden="true"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
